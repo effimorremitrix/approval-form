@@ -199,7 +199,7 @@ const DEFAULT_TEXT={
 let DB={sigs:[],text:{...DEFAULT_TEXT}};
 
 async function fetchDB(){
-  const res=await fetch(BIN_URL+'/latest',{headers:{'X-Master-Key':API_KEY}});
+  const res=await fetch(BIN_URL+'/latest?nocache='+Date.now(),{headers:{'X-Master-Key':API_KEY,'Cache-Control':'no-cache'}});
   const data=await res.json();
   if(data.record){
     DB.sigs=Array.isArray(data.record.sigs)?data.record.sigs:[];
@@ -207,8 +207,18 @@ async function fetchDB(){
   }
 }
 async function saveDB(){
-  const res=await fetch(BIN_URL,{method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':API_KEY},body:JSON.stringify(DB)});
+  const res=await fetch(BIN_URL,{
+    method:'PUT',
+    headers:{'Content-Type':'application/json','X-Master-Key':API_KEY},
+    body:JSON.stringify(DB)
+  });
   if(!res.ok) throw new Error('JSONBin save failed: '+res.status);
+  // JSONBin returns the saved record in the response — use it as source of truth
+  const saved=await res.json();
+  if(saved.record){
+    DB.sigs=Array.isArray(saved.record.sigs)?saved.record.sigs:DB.sigs;
+    DB.text=saved.record.text||DB.text;
+  }
   return res;
 }
 function renderFormText(){
@@ -271,19 +281,33 @@ async function submitForm(){
   const entry={id:Date.now(),email:document.getElementById('f-email').value,name:document.getElementById('f-name').value,phone:document.getElementById('f-phone').value,apt:document.getElementById('f-apt').value,vote:getVote(),date:document.getElementById('f-date').value,sig:canvas.toDataURL('image/png'),ts:new Date().toLocaleString('he-IL',{timeZone:'Asia/Jerusalem'})};
   try{
     // Retry up to 3 times to handle JSONBin race conditions
-    let saved=false;
-    for(let attempt=0;attempt<3;attempt++){
-      await fetchDB();
-      // Check not already submitted (same id)
-      if(!DB.sigs.find(x=>x.id===entry.id)){
-        DB.sigs.push(entry);
-      }
-      const res=await fetch(BIN_URL,{method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':API_KEY},body:JSON.stringify(DB)});
-      if(res.ok){saved=true;break;}
-      await new Promise(r=>setTimeout(r,500));
+    // Fetch fresh DB, append, save, verify
+    await fetchDB();
+    const beforeCount=DB.sigs.length;
+    DB.sigs.push(entry);
+    // PUT to JSONBin
+    const putRes=await fetch(BIN_URL,{method:'PUT',
+      headers:{'Content-Type':'application/json','X-Master-Key':API_KEY},
+      body:JSON.stringify(DB)});
+    if(!putRes.ok) throw new Error('PUT failed: '+putRes.status);
+    // Wait 800ms then verify the save actually persisted
+    await new Promise(r=>setTimeout(r,800));
+    const verifyRes=await fetch(BIN_URL+'/latest',{headers:{'X-Master-Key':API_KEY}});
+    const verifyData=await verifyRes.json();
+    const savedSigs=Array.isArray(verifyData.record?.sigs)?verifyData.record.sigs:[];
+    if(!savedSigs.find(x=>x.id===entry.id)){
+      // Not found — retry once more
+      DB.sigs=savedSigs;
+      if(!DB.sigs.find(x=>x.id===entry.id)) DB.sigs.push(entry);
+      const retryRes=await fetch(BIN_URL,{method:'PUT',
+        headers:{'Content-Type':'application/json','X-Master-Key':API_KEY},
+        body:JSON.stringify(DB)});
+      if(!retryRes.ok) throw new Error('Retry PUT failed: '+retryRes.status);
+    } else {
+      DB.sigs=savedSigs;
     }
-    if(!saved)throw new Error('Save failed after 3 attempts');
     document.getElementById('successBanner').style.display='block';
+    document.getElementById('successBanner').textContent='✓ החתימה נשמרה בהצלחה! סה"כ חתימות: '+DB.sigs.length;
     ['f-email','f-name','f-phone','f-apt','f-date'].forEach(id=>document.getElementById(id).value='');
     document.querySelectorAll('input[name="vote"]').forEach(c=>c.checked=false);
     clearSig();window.scrollTo({top:0,behavior:'smooth'});
