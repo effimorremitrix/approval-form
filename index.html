@@ -182,9 +182,9 @@ canvas#sig{width:100%;height:140px;border:0.5px solid #e0ddf5;border-radius:8px;
 </div>
 
 <script>
-const BIN_ID='6a0d94feee5a733b12ed0d03';
-const API_KEY='$2a$10$yTTXTE7/XAgD9qZyDhlnWO14yXNBX8Ow/25Hg4L6OQarDf8M2oumu';
-const BIN_URL=`https://api.jsonbin.io/v3/b/${BIN_ID}`;
+const SUPABASE_URL='https://sbdhscqtennbxrkmyeee.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNiZGhzY3F0ZW5uYnhya215ZWVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNTk3MzAsImV4cCI6MjA5NDgzNTczMH0.psfCGSlVXHbnvDJo9m2SNv9X_ZRNM2yD85J9ZNUrAfY';
+const SB_H={'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY};
 const ADMIN_PASS='admin123';
 
 const DEFAULT_TEXT={
@@ -199,27 +199,25 @@ const DEFAULT_TEXT={
 let DB={sigs:[],text:{...DEFAULT_TEXT}};
 
 async function fetchDB(){
-  const res=await fetch(BIN_URL+'/latest?nocache='+Date.now(),{headers:{'X-Master-Key':API_KEY,'Cache-Control':'no-cache'}});
-  const data=await res.json();
-  if(data.record){
-    DB.sigs=Array.isArray(data.record.sigs)?data.record.sigs:[];
-    DB.text=data.record.text||{...DEFAULT_TEXT};
+  const sRes=await fetch(SUPABASE_URL+'/rest/v1/signatures?select=*&order=id.asc',{headers:SB_H});
+  if(!sRes.ok) throw new Error('Fetch sigs failed: '+sRes.status);
+  DB.sigs=await sRes.json();
+  const tRes=await fetch(SUPABASE_URL+'/rest/v1/form_text?select=*&limit=1',{headers:SB_H});
+  if(tRes.ok){
+    const tData=await tRes.json();
+    if(tData&&tData[0]){
+      const r=tData[0];
+      DB.text={title:r.title||DEFAULT_TEXT.title,p1:r.p1||DEFAULT_TEXT.p1,p2:r.p2||DEFAULT_TEXT.p2,p3:r.p3||DEFAULT_TEXT.p3,p4:r.p4||DEFAULT_TEXT.p4,p5:r.p5||DEFAULT_TEXT.p5};
+    }
   }
 }
 async function saveDB(){
-  const res=await fetch(BIN_URL,{
-    method:'PUT',
-    headers:{'Content-Type':'application/json','X-Master-Key':API_KEY},
-    body:JSON.stringify(DB)
+  // Text only — signatures handled individually
+  const res=await fetch(SUPABASE_URL+'/rest/v1/form_text?id=eq.1',{
+    method:'PATCH',headers:{...SB_H,'Prefer':'return=minimal'},
+    body:JSON.stringify(DB.text)
   });
-  if(!res.ok) throw new Error('JSONBin save failed: '+res.status);
-  // JSONBin returns the saved record in the response — use it as source of truth
-  const saved=await res.json();
-  if(saved.record){
-    DB.sigs=Array.isArray(saved.record.sigs)?saved.record.sigs:DB.sigs;
-    DB.text=saved.record.text||DB.text;
-  }
-  return res;
+  if(!res.ok) throw new Error('Text save failed: '+res.status);
 }
 function renderFormText(){
   document.getElementById('formTitle').textContent=DB.text.title||DEFAULT_TEXT.title;
@@ -280,38 +278,20 @@ async function submitForm(){
   btn.innerHTML='שומר...<span class="spinner"></span>';btn.disabled=true;
   const entry={id:Date.now(),email:document.getElementById('f-email').value,name:document.getElementById('f-name').value,phone:document.getElementById('f-phone').value,apt:document.getElementById('f-apt').value,vote:getVote(),date:document.getElementById('f-date').value,sig:canvas.toDataURL('image/png'),ts:new Date().toLocaleString('he-IL',{timeZone:'Asia/Jerusalem'})};
   try{
-    // Retry up to 3 times to handle JSONBin race conditions
-    // Fetch fresh DB, append, save, verify
-    await fetchDB();
-    const beforeCount=DB.sigs.length;
+    // Insert directly to Supabase — no race conditions
+    const insRes=await fetch(SUPABASE_URL+'/rest/v1/signatures',{
+      method:'POST',
+      headers:{...SB_H,'Prefer':'return=minimal'},
+      body:JSON.stringify(entry)
+    });
+    if(!insRes.ok){const e=await insRes.text();throw new Error('Insert failed: '+insRes.status+' '+e);}
     DB.sigs.push(entry);
-    // PUT to JSONBin
-    const putRes=await fetch(BIN_URL,{method:'PUT',
-      headers:{'Content-Type':'application/json','X-Master-Key':API_KEY},
-      body:JSON.stringify(DB)});
-    if(!putRes.ok) throw new Error('PUT failed: '+putRes.status);
-    // Wait 800ms then verify the save actually persisted
-    await new Promise(r=>setTimeout(r,800));
-    const verifyRes=await fetch(BIN_URL+'/latest',{headers:{'X-Master-Key':API_KEY}});
-    const verifyData=await verifyRes.json();
-    const savedSigs=Array.isArray(verifyData.record?.sigs)?verifyData.record.sigs:[];
-    if(!savedSigs.find(x=>x.id===entry.id)){
-      // Not found — retry once more
-      DB.sigs=savedSigs;
-      if(!DB.sigs.find(x=>x.id===entry.id)) DB.sigs.push(entry);
-      const retryRes=await fetch(BIN_URL,{method:'PUT',
-        headers:{'Content-Type':'application/json','X-Master-Key':API_KEY},
-        body:JSON.stringify(DB)});
-      if(!retryRes.ok) throw new Error('Retry PUT failed: '+retryRes.status);
-    } else {
-      DB.sigs=savedSigs;
-    }
     document.getElementById('successBanner').style.display='block';
-    document.getElementById('successBanner').textContent='✓ החתימה נשמרה בהצלחה! סה"כ חתימות: '+DB.sigs.length;
+    document.getElementById('successBanner').textContent='✓ החתימה נשמרה בהצלחה!';
     ['f-email','f-name','f-phone','f-apt','f-date'].forEach(id=>document.getElementById(id).value='');
     document.querySelectorAll('input[name="vote"]').forEach(c=>c.checked=false);
     clearSig();window.scrollTo({top:0,behavior:'smooth'});
-  }catch(e){alert('שגיאה בשמירה. נסה שנית.');}
+  }catch(e){alert('שגיאה בשמירה: '+e.message);}
   btn.innerHTML='שלח';btn.disabled=false;
 }
 
@@ -357,9 +337,12 @@ function loadTextIntoEditor(){
 }
 async function saveText(){
   DB.text={title:document.getElementById('ed-title').value,p1:document.getElementById('ed-p1').value,p2:document.getElementById('ed-p2').value,p3:document.getElementById('ed-p3').value,p4:document.getElementById('ed-p4').value,p5:document.getElementById('ed-p5').value};
-  await saveDB();renderFormText();
-  document.getElementById('saveNote').style.display='block';
-  setTimeout(()=>document.getElementById('saveNote').style.display='none',4000);
+  try{
+    await saveDB();
+    renderFormText();
+    document.getElementById('saveNote').style.display='block';
+    setTimeout(()=>document.getElementById('saveNote').style.display='none',4000);
+  }catch(e){alert('שגיאה בשמירת טקסט: '+e.message);}
 }
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
@@ -531,8 +514,8 @@ async function deleteSig(id){
   const s=DB.sigs.find(x=>x.id===id);
   if(!s)return;
   if(!confirm('למחוק את החתימה של '+s.name+'?\nפעולה זו אינה ניתנת לביטול.'))return;
-  DB.sigs=DB.sigs.filter(x=>x.id!==id);
-  await saveDB();
+  const res=await fetch(SUPABASE_URL+'/rest/v1/signatures?id=eq.'+id,{method:'DELETE',headers:SB_H});
+  if(!res.ok){alert('שגיאה במחיקה');return;}
   await loadAdmin();
 }
 
