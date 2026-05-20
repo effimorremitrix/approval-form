@@ -307,6 +307,7 @@ function renderList(sigs){
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <span class="vote-badge ${s.vote==='בעד'?'vote-for':s.vote==='נגד'?'vote-against':'vote-abstain'}">${esc(s.vote)}</span>
           <button class="btn-sm" onclick="downloadOnePDF(${s.id})">PDF</button>
+          <button class="btn-sm" style="border-color:#e74c3c;color:#e74c3c" onclick="deleteSig(${s.id})">מחק</button>
         </div>
       </div>
       <img class="sig-img" src="${s.sig}" alt="חתימה"/>
@@ -485,6 +486,16 @@ async function downloadAllPDF(){
   doc.text(`Generated: ${new Date().toLocaleString('he-IL')}  |  Chana Snesh 16-22, Bat Yam`, PW/2, PH-3, {align:'center'});
 
   doc.save(`signatures_${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
+// ── Delete a signature ────────────────────────────────────
+async function deleteSig(id){
+  const s=DB.sigs.find(x=>x.id===id);
+  if(!s)return;
+  if(!confirm('למחוק את החתימה של '+s.name+'?\nפעולה זו אינה ניתנת לביטול.'))return;
+  DB.sigs=DB.sigs.filter(x=>x.id!==id);
+  await saveDB();
+  await loadAdmin();
 }
 
 // ── Download single PDF ───────────────────────────────────
