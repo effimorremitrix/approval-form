@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>אישור החלטה דיגיטלי</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,sans-serif;background:#f8f7ff;color:#2d3436;min-height:100vh;padding:20px 16px 48px;direction:rtl}
@@ -187,6 +188,12 @@ const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 const SB_H={'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY};
 const ADMIN_PASS='admin123';
 
+// EmailJS
+const EJS_SERVICE='service_63dmvfk';
+const EJS_TEMPLATE='template_818qd5c';
+const EJS_KEY='Ai0TJmxL5ykWR1Bqx';
+(function(){if(window.emailjs)emailjs.init({publicKey:EJS_KEY});})();
+
 const DEFAULT_TEXT={
   title:'אישור החלטה דיגיטלי',
   p1:'פרוטוקול מאסיפת בעלי הנכסים בבניין ברחוב חנה סנש 16-22 בבת-ים שהתקיימה ביום 25.1.26 בזום.',
@@ -288,6 +295,20 @@ async function submitForm(){
     DB.sigs.push(entry);
     document.getElementById('successBanner').style.display='block';
     document.getElementById('successBanner').textContent='✓ החתימה נשמרה בהצלחה!';
+    // Send email notification
+    try{
+      if(window.emailjs){
+        emailjs.send(EJS_SERVICE,EJS_TEMPLATE,{
+          name:entry.name,
+          apt:entry.apt,
+          vote:entry.vote,
+          email:entry.email,
+          phone:entry.phone,
+          date:entry.date,
+          ts:entry.ts
+        });
+      }
+    }catch(ex){console.warn('EmailJS error:',ex);}
     ['f-email','f-name','f-phone','f-apt','f-date'].forEach(id=>document.getElementById(id).value='');
     document.querySelectorAll('input[name="vote"]').forEach(c=>c.checked=false);
     clearSig();window.scrollTo({top:0,behavior:'smooth'});
