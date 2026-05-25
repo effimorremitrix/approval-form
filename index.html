@@ -192,7 +192,9 @@ const ADMIN_PASS='admin123';
 const EJS_SERVICE='service_63dmvfk';
 const EJS_TEMPLATE='template_818qd5c';
 const EJS_KEY='Ai0TJmxL5ykWR1Bqx';
-(function(){if(window.emailjs)emailjs.init({publicKey:EJS_KEY});})();
+window.addEventListener('load',function(){
+  if(window.emailjs)emailjs.init({publicKey:EJS_KEY});
+});
 
 const DEFAULT_TEXT={
   title:'אישור החלטה דיגיטלי',
@@ -298,7 +300,7 @@ async function submitForm(){
     // Send email notification
     try{
       if(window.emailjs){
-        emailjs.send(EJS_SERVICE,EJS_TEMPLATE,{
+        const ejsRes=await emailjs.send(EJS_SERVICE,EJS_TEMPLATE,{
           name:entry.name,
           apt:entry.apt,
           vote:entry.vote,
@@ -307,8 +309,11 @@ async function submitForm(){
           date:entry.date,
           ts:entry.ts
         });
+        console.log('EmailJS sent:',ejsRes.status,ejsRes.text);
+      }else{
+        console.warn('EmailJS not loaded');
       }
-    }catch(ex){console.warn('EmailJS error:',ex);}
+    }catch(ex){console.warn('EmailJS error:',ex.text||ex);}
     ['f-email','f-name','f-phone','f-apt','f-date'].forEach(id=>document.getElementById(id).value='');
     document.querySelectorAll('input[name="vote"]').forEach(c=>c.checked=false);
     clearSig();window.scrollTo({top:0,behavior:'smooth'});
