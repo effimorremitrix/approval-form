@@ -416,6 +416,62 @@ function voteImg(vote){
   return c.toDataURL('image/png');
 }
 
+// ── Render a multi-line RTL Hebrew paragraph block to an image ──
+// Wraps words to fit mmW, renders right-aligned (proper RTL).
+// Returns {img, mmH} so the caller can lay it out with correct height.
+function paragraphImg(paragraphs, opts={}){
+  const fs    = opts.fontSize || 9;
+  const bold  = opts.bold || false;
+  const color = opts.color || '#2d3436';
+  const mmW   = opts.mmW || 170;
+  const PX_PER_MM = 4;
+  const cW    = Math.round(mmW * PX_PER_MM);
+  const pad   = 4;                       // px padding each side
+  const fontPx= fs * PX_PER_MM / 3;      // same scale convention as textImg
+  const lineH = fontPx * 1.5;
+  const paraGap = fontPx * 0.7;
+  const fontStr = `${bold?'bold ':''}${fontPx}px Arial,sans-serif`;
+  const maxTextW = cW - pad*2;
+
+  // ── Measure / wrap pass ──
+  const meas = document.createElement('canvas').getContext('2d');
+  meas.font = fontStr;
+  const lines = [];                      // string = text line, null = paragraph gap
+  (paragraphs||[]).forEach((para,pi)=>{
+    const words = String(para||'').split(/\s+/).filter(Boolean);
+    let line = '';
+    words.forEach(w=>{
+      const test = line ? line+' '+w : w;
+      if(line && meas.measureText(test).width > maxTextW){ lines.push(line); line = w; }
+      else line = test;
+    });
+    if(line) lines.push(line);
+    if(pi < paragraphs.length-1) lines.push(null);
+  });
+
+  // ── Height ──
+  let totalPx = pad*2;
+  lines.forEach(l=> totalPx += (l===null ? paraGap : lineH));
+  const cH = Math.max(Math.ceil(totalPx), Math.ceil(lineH+pad*2));
+
+  // ── Draw pass (right-aligned RTL) ──
+  const c = document.createElement('canvas');
+  c.width = cW; c.height = cH;
+  const cx = c.getContext('2d');
+  cx.font = fontStr;
+  cx.fillStyle = color;
+  cx.textBaseline = 'top';
+  cx.direction = 'rtl';
+  cx.textAlign = 'right';
+  let yy = pad;
+  lines.forEach(l=>{
+    if(l===null){ yy += paraGap; return; }
+    cx.fillText(l, cW - pad, yy);
+    yy += lineH;
+  });
+  return {img:c.toDataURL('image/png'), mmH: cH/PX_PER_MM};
+}
+
 // ── Download all PDF ──────────────────────────────────────
 async function downloadAllPDF(){
   await fetchDB();
@@ -557,7 +613,20 @@ async function downloadOnePDF(id){
   doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(255,255,255);
   doc.text('Digital Approval Form',M,9);
 
-  let y=22;
+  let y=20;
+
+  // ── Agreement text they were signing for (top of the document) ──
+  const agParas=['p1','p2','p3','p4','p5'].filter(k=>DB.text&&DB.text[k]).map(k=>DB.text[k]);
+  const agTitle=(DB.text&&DB.text.title)||DEFAULT_TEXT.title;
+  const titleBlock=paragraphImg([agTitle],{fontSize:12,bold:true,color:'#6c5ce7',mmW:CW});
+  doc.addImage(titleBlock.img,'PNG',M,y,CW,titleBlock.mmH);
+  y+=titleBlock.mmH+1;
+  if(agParas.length){
+    const bodyBlock=paragraphImg(agParas,{fontSize:8.5,color:'#2d3436',mmW:CW});
+    doc.addImage(bodyBlock.img,'PNG',M,y,CW,bodyBlock.mmH);
+    y+=bodyBlock.mmH+3;
+  }
+  doc.setDrawColor(210,205,245);doc.line(M,y,W-M,y);y+=8;
 
   function pdfRow(label, value, highlight){
     doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(160,155,200);
