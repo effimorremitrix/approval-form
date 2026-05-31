@@ -491,7 +491,22 @@ async function downloadAllPDF(){
   const sImg = textImg(`Chana Snesh 16-22, Bat Yam  |  Total: ${sigs.length}  |  ${new Date().toLocaleDateString('he-IL')}`,{fontSize:10,color:'#ddd',mmW:240,mmH:6});
   doc.addImage(sImg,'PNG',M,13,240,6);
 
+  // ── Agreement text they were signing for (full-width card at top) ──
+  const cardW=PW-M*2, pad=4;
+  const agParas=['p1','p2','p3','p4','p5'].filter(k=>DB.text&&DB.text[k]).map(k=>DB.text[k]);
+  const agTitle=(DB.text&&DB.text.title)||DEFAULT_TEXT.title;
+  const titleBlock=paragraphImg([agTitle],{fontSize:12,bold:true,color:'#6c5ce7',mmW:cardW-pad*2});
+  const bodyBlock=agParas.length?paragraphImg(agParas,{fontSize:8.5,color:'#2d3436',mmW:cardW-pad*2}):null;
+  const cardH=pad*2+titleBlock.mmH+(bodyBlock?bodyBlock.mmH+2:0);
+  doc.setFillColor(255,255,255);doc.setDrawColor(225,222,248);
+  doc.roundedRect(M,31,cardW,cardH,3,3,'FD');
+  let cy=31+pad;
+  doc.addImage(titleBlock.img,'PNG',M+pad,cy,cardW-pad*2,titleBlock.mmH);
+  cy+=titleBlock.mmH+(bodyBlock?2:0);
+  if(bodyBlock)doc.addImage(bodyBlock.img,'PNG',M+pad,cy,cardW-pad*2,bodyBlock.mmH);
+
   // ── Summary badges ──
+  const badgeY=31+cardH+5;
   const fC=sigs.filter(s=>s.vote==='בעד').length;
   const aC=sigs.filter(s=>s.vote==='נגד').length;
   const abC=sigs.filter(s=>s.vote==='נמנע').length;
@@ -502,9 +517,9 @@ async function downloadAllPDF(){
     [`Abstain: ${abC}`,[150,150,150]],
     [`Total: ${sigs.length}`,[108,92,231]]
   ].forEach(([lbl,col])=>{
-    doc.setFillColor(...col);doc.roundedRect(bx,30,36,10,2,2,'F');
+    doc.setFillColor(...col);doc.roundedRect(bx,badgeY,36,10,2,2,'F');
     const bi=textImg(lbl,{fontSize:9,bold:true,color:'#ffffff',mmW:34,mmH:8});
-    doc.addImage(bi,'PNG',bx+1,31,34,8);
+    doc.addImage(bi,'PNG',bx+1,badgeY+1,34,8);
     bx+=40;
   });
 
@@ -522,7 +537,7 @@ async function downloadAllPDF(){
   ];
 
   const ROW_H = 20;
-  let y = 44;
+  let y = badgeY + 14;
 
   // Header row
   doc.setFillColor(235,233,255);
