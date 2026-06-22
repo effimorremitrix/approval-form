@@ -382,7 +382,7 @@ async function submitForm(){
   btn.innerHTML='שומר...<span class="spinner"></span>';btn.disabled=true;
   const sel=getSelected();
   const base={
-    email:document.getElementById('f-email').value,
+    email:document.getElementById('f-email').value.trim(),
     name:document.getElementById('f-name').value,
     phone:document.getElementById('f-phone').value,
     apt:document.getElementById('f-apt').value,
@@ -394,14 +394,20 @@ async function submitForm(){
   // one record per selected form; offset id to avoid PK collision in a single submit
   const entries=sel.map((s,i)=>({...base,id:now+i,form_id:Number(s.formId),vote:s.vote}));
   try{
-    // Bulk insert array directly to Supabase
-    const insRes=await fetch(SUPABASE_URL+'/rest/v1/signatures',{
+    // Upsert: one signature per email per form. Re-signing the same form updates
+    // the existing row (vote/signature) instead of creating a duplicate.
+    // Requires a unique index on signatures(email, form_id) — see migration.
+    const insRes=await fetch(SUPABASE_URL+'/rest/v1/signatures?on_conflict=email,form_id',{
       method:'POST',
-      headers:{...SB_H,'Prefer':'return=minimal'},
+      headers:{...SB_H,'Prefer':'resolution=merge-duplicates,return=minimal'},
       body:JSON.stringify(entries)
     });
     if(!insRes.ok){const e=await insRes.text();throw new Error('Insert failed: '+insRes.status+' '+e);}
-    entries.forEach(e=>DB.sigs.push(e));
+    // keep local cache consistent: replace any existing row for the same email+form
+    entries.forEach(e=>{
+      DB.sigs=DB.sigs.filter(x=>!(String(x.email)===String(e.email)&&String(x.form_id)===String(e.form_id)));
+      DB.sigs.push(e);
+    });
     document.getElementById('successBanner').style.display='block';
     document.getElementById('successBanner').textContent=entries.length>1?'✓ '+entries.length+' החתימות נשמרו בהצלחה!':'✓ החתימה נשמרה בהצלחה!';
     // Send one email notification per signed form
