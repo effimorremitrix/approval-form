@@ -31,6 +31,20 @@ input::placeholder{color:#b2bec3}
 .cbitem input[type=checkbox]{width:18px;height:18px;accent-color:#6c5ce7;cursor:pointer;flex-shrink:0}
 .field-err{font-size:12px;color:#e74c3c;margin-top:4px;display:none}
 .card.invalid .field-err{display:block}
+.forms-select-label{font-size:14px;font-weight:600;color:#2d3436;margin:18px 0 10px;display:flex;align-items:center;gap:3px}
+.fsel{background:#fff;border:0.5px solid #e0ddf5;border-radius:12px;padding:14px 18px;margin-bottom:10px;transition:border-color .2s}
+.fsel.picked{border-color:#6c5ce7;background:#fbfaff}
+.fsel.invalid{border-color:#e74c3c}
+.fsel-head{display:flex;align-items:flex-start;gap:10px;cursor:pointer;flex-direction:row-reverse;justify-content:flex-end}
+.fsel-head input[type=checkbox]{width:18px;height:18px;accent-color:#6c5ce7;cursor:pointer;flex-shrink:0;margin-top:3px}
+.fsel-title{font-size:15px;font-weight:600;color:#2d3436}
+.fsel-body{font-size:12px;color:#636e72;line-height:1.7;margin-top:6px}
+.fsel-body p{margin-bottom:4px}
+.fsel-votes{margin-top:12px;padding-top:12px;border-top:0.5px solid #e0ddf5}
+.fsel-votes[hidden]{display:none}
+.fsel-votes .vlbl{font-size:12px;font-weight:500;color:#636e72;margin-bottom:8px}
+.fsel .field-err{display:none}
+.fsel.invalid .field-err{display:block}
 .colors{display:flex;gap:8px;margin-bottom:10px;justify-content:flex-end}
 .cdot{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .15s,border-color .15s}
 .cdot.active{border-color:#6c5ce7;transform:scale(1.2)}
@@ -75,7 +89,16 @@ canvas#sig{width:100%;height:140px;border:0.5px solid #e0ddf5;border-radius:8px;
 .editor-card h3{font-size:14px;font-weight:500;margin-bottom:14px;padding-bottom:10px;border-bottom:0.5px solid #e0ddf5}
 .editor-field{margin-bottom:14px}
 .editor-field label{display:block;font-size:12px;font-weight:500;color:#636e72;margin-bottom:5px}
-.editor-field input,.editor-field textarea{width:100%;padding:9px 12px;border:0.5px solid #e0ddf5;border-radius:8px;font-family:inherit;font-size:14px;color:#2d3436;background:#f8f7ff;outline:none;direction:rtl;resize:vertical}
+.editor-field input,.editor-field textarea,.editor-field select{width:100%;padding:9px 12px;border:0.5px solid #e0ddf5;border-radius:8px;font-family:inherit;font-size:14px;color:#2d3436;background:#f8f7ff;outline:none;direction:rtl;resize:vertical}
+.editor-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px;padding-bottom:10px;border-bottom:0.5px solid #e0ddf5}
+.editor-card-top h3{margin:0;padding:0;border:0}
+.form-mgr-item{background:#fff;border:0.5px solid #e0ddf5;border-radius:12px;padding:14px 18px;margin-bottom:10px}
+.form-mgr-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.form-mgr-name{font-size:15px;font-weight:600}
+.form-mgr-meta{font-size:12px;color:#636e72;margin-top:3px}
+.badge-inactive{font-size:11px;padding:2px 8px;border-radius:10px;background:#f5f5f5;color:#636e72;font-weight:500}
+.toggle-row{display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:13px;color:#636e72}
+.toggle-row input{width:auto}
 .save-note{font-size:12px;color:#00b894;display:none;margin-top:8px;font-weight:500}
 .notice{background:#e8f4fd;border:0.5px solid #74b9ff;border-radius:8px;padding:10px 16px;font-size:12px;color:#0984e3;margin-bottom:14px}
 </style>
@@ -93,10 +116,10 @@ canvas#sig{width:100%;height:140px;border:0.5px solid #e0ddf5;border-radius:8px;
 <div class="container">
   <div class="header">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
-      <h1 id="formTitle">אישור החלטה דיגיטלי</h1>
+      <h1 id="formTitle">טפסים לחתימה</h1>
       <div style="width:36px;height:36px;background:#6c5ce7;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;flex-shrink:0;margin-right:10px">b</div>
     </div>
-    <div class="header-meta" id="formBody"><p style="color:#b2bec3">טוען...</p></div>
+    <div class="header-meta"><p>מלאו את הפרטים, בחרו את הטפסים שברצונכם לחתום עליהם, וחתמו פעם אחת בתחתית העמוד.</p></div>
   </div>
   <div class="req-note">* שדות חובה</div>
   <div class="success" id="successBanner">✓ החתימה נשמרה בהצלחה! תודה.</div>
@@ -104,16 +127,10 @@ canvas#sig{width:100%;height:140px;border:0.5px solid #e0ddf5;border-radius:8px;
   <div class="card" id="c-name"><div class="label">שם מלא <span class="req">*</span></div><input type="text" id="f-name" placeholder="הכנס שם"/><div class="field-err">שדה חובה</div></div>
   <div class="card" id="c-phone"><div class="label">טלפון <span class="req">*</span></div><input type="tel" id="f-phone" placeholder="05X-XXXXXXX"/><div class="field-err">שדה חובה</div></div>
   <div class="card" id="c-apt"><div class="label">מספר קומה ומספר דירה <span class="req">*</span></div><input type="text" id="f-apt" placeholder="קומה X, דירה Y"/><div class="field-err">שדה חובה</div></div>
-  <div class="card" id="c-vote">
-    <div class="label">אני מאשר/ת את ההחלטה המופיעה בטופס זה <span class="req">*</span></div>
-    <div class="cbgroup">
-      <label class="cbitem"><span>בעד</span><input type="checkbox" name="vote" value="בעד" onchange="exclusiveCheck(this)"/></label>
-      <label class="cbitem"><span>נגד</span><input type="checkbox" name="vote" value="נגד" onchange="exclusiveCheck(this)"/></label>
-      <label class="cbitem"><span>נמנע</span><input type="checkbox" name="vote" value="נמנע" onchange="exclusiveCheck(this)"/></label>
-    </div>
-    <div class="field-err">יש לבחור עמדה</div>
-  </div>
   <div class="card" id="c-date"><div class="label">מועד חתימה <span class="req">*</span></div><input type="date" id="f-date"/><div class="field-err">שדה חובה</div></div>
+  <div class="forms-select-label">בחרו אילו טפסים לחתום <span class="req">*</span></div>
+  <div id="formsSelector"><div class="loading-msg">טוען טפסים...</div></div>
+  <div class="field-err" id="formsSelErr">יש לבחור לפחות טופס אחד</div>
   <div class="card" id="c-sig">
     <div class="label">חתימה <span class="req">*</span></div>
     <div style="font-size:12px;color:#636e72;margin-bottom:10px">חתמו בתוך המשבצת</div>
@@ -144,38 +161,46 @@ canvas#sig{width:100%;height:140px;border:0.5px solid #e0ddf5;border-radius:8px;
   <div id="adminPanel" style="display:none">
     <div class="section-tabs">
       <button class="stab active" onclick="showSection('sigs')">חתימות</button>
-      <button class="stab" onclick="showSection('editor')">עריכת טקסט הטופס</button>
+      <button class="stab" onclick="showSection('editor')">ניהול טפסים</button>
     </div>
     <div id="sec-sigs">
-      <div class="notice">הנתונים נשמרים ב-JSONBin · זהה למה שמנהל הוועד רואה בדף הניהול הנפרד</div>
       <div class="admin-header">
         <h2 style="font-size:15px;font-weight:500">חתימות שהתקבלו</h2>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn-sm" onclick="loadAdmin()">רענן</button>
-          <button class="btn-primary" onclick="downloadAllPDF()">הורד PDF מלא</button>
+          <button class="btn-primary" id="btnDlAll" onclick="downloadCurrentPDF()">הורד PDF מלא</button>
         </div>
       </div>
+      <div class="editor-field" style="margin-bottom:14px"><label>טופס</label><select id="adminFormPicker" onchange="onAdminFormChange()"></select></div>
       <div class="stats" id="statsBar"></div>
       <div id="sigList"><div class="loading-msg">טוען חתימות...</div></div>
     </div>
     <div id="sec-editor" style="display:none">
-      <div class="editor-card">
-        <h3>כותרת הטופס</h3>
-        <div class="editor-field"><label>כותרת ראשית</label><input type="text" id="ed-title"/></div>
-      </div>
-      <div class="editor-card">
-        <h3>טקסט הפרוטוקול</h3>
-        <p style="font-size:12px;color:#636e72;margin-bottom:12px">כל שורה = פסקה נפרדת בטופס</p>
-        <div class="editor-field"><label>שורה 1</label><input type="text" id="ed-p1"/></div>
-        <div class="editor-field"><label>שורה 2</label><input type="text" id="ed-p2"/></div>
-        <div class="editor-field"><label>שורה 3</label><textarea id="ed-p3" rows="3"></textarea></div>
-        <div class="editor-field"><label>שורה 4</label><input type="text" id="ed-p4"/></div>
-        <div class="editor-field"><label>שורה 5</label><input type="text" id="ed-p5"/></div>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button class="btn-success" onclick="saveText()">שמור ועדכן טופס</button>
-          <button class="btn-sm" onclick="loadTextIntoEditor()">בטל שינויים</button>
+      <div id="formMgrList"></div>
+      <div style="margin:6px 0 16px"><button class="btn-primary" onclick="newForm()">+ טופס חדש</button></div>
+
+      <div class="editor-card" id="formEditor" style="display:none">
+        <div class="editor-card-top">
+          <h3 id="formEditorTitle">טופס חדש</h3>
+          <button class="btn-sm" onclick="closeFormEditor()">סגור</button>
         </div>
-        <div class="save-note" id="saveNote">✓ הטקסט עודכן. הדיירים יראו את הגרסה החדשה.</div>
+        <div class="editor-field"><label>כותרת הטופס</label><input type="text" id="ed-title" placeholder="כותרת הטופס"/></div>
+        <div class="editor-field">
+          <label>טקסט הטופס</label>
+          <p style="font-size:12px;color:#636e72;margin:-2px 0 6px">כל שורה = פסקה נפרדת בטופס</p>
+          <textarea id="ed-body" rows="7" placeholder="טקסט הטופס..."></textarea>
+        </div>
+        <div class="editor-field">
+          <label>אפשרויות הצבעה</label>
+          <p style="font-size:12px;color:#636e72;margin:-2px 0 6px">כל שורה = אפשרות בחירה אחת (ברירת מחדל: בעד / נגד / נמנע)</p>
+          <textarea id="ed-votes" rows="3" placeholder="בעד&#10;נגד&#10;נמנע"></textarea>
+        </div>
+        <div class="toggle-row"><input type="checkbox" id="ed-active" checked/><label for="ed-active" style="display:inline">טופס פעיל (מוצג לחותמים)</label></div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn-success" onclick="saveForm()">שמור טופס</button>
+          <button class="btn-sm" onclick="closeFormEditor()">ביטול</button>
+        </div>
+        <div class="save-note" id="saveNote">✓ הטופס נשמר. החותמים יראו את הגרסה החדשה.</div>
       </div>
     </div>
   </div>
@@ -205,35 +230,86 @@ const DEFAULT_TEXT={
   p5:'האישור נרשם עם שם, אימייל, תאריך ושעה'
 };
 
-let DB={sigs:[],text:{...DEFAULT_TEXT}};
+const DEFAULT_VOTES=['בעד','נגד','נמנע'];
+
+// Vote label → color. Legacy 3 labels keep their exact look; custom labels map
+// green/red/gray by position within the form's options (extras → gray).
+const VOTE_PALETTE=[
+  {cls:'vote-for',color:'#1a9e5c',bg:'#eafaf1'},
+  {cls:'vote-against',color:'#c0392b',bg:'#fdf2f0'},
+  {cls:'vote-abstain',color:'#636e72',bg:'#f0f0f0'}
+];
+function voteStyle(label,form){
+  if(label==='בעד')return VOTE_PALETTE[0];
+  if(label==='נגד')return VOTE_PALETTE[1];
+  if(label==='נמנע')return VOTE_PALETTE[2];
+  const i=form&&Array.isArray(form.vote_options)?form.vote_options.indexOf(label):-1;
+  return VOTE_PALETTE[Math.min(Math.max(i,0),VOTE_PALETTE.length-1)];
+}
+
+function hexRgb(h){h=String(h||'').replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+
+// paragraphs from a newline-separated body
+function bodyParas(form){return String(form&&form.body||'').split('\n').map(s=>s.trim()).filter(Boolean);}
+function voteOpts(form){const v=form&&form.vote_options;return Array.isArray(v)&&v.length?v:DEFAULT_VOTES;}
+
+let DB={sigs:[],forms:[]};
+let adminFormId='all';
 
 async function fetchDB(){
   const sRes=await fetch(SUPABASE_URL+'/rest/v1/signatures?select=*&order=id.asc',{headers:SB_H});
   if(!sRes.ok) throw new Error('Fetch sigs failed: '+sRes.status);
   DB.sigs=await sRes.json();
-  const tRes=await fetch(SUPABASE_URL+'/rest/v1/form_text?select=*&limit=1',{headers:SB_H});
-  if(tRes.ok){
-    const tData=await tRes.json();
-    if(tData&&tData[0]){
-      const r=tData[0];
-      DB.text={title:r.title||DEFAULT_TEXT.title,p1:r.p1||DEFAULT_TEXT.p1,p2:r.p2||DEFAULT_TEXT.p2,p3:r.p3||DEFAULT_TEXT.p3,p4:r.p4||DEFAULT_TEXT.p4,p5:r.p5||DEFAULT_TEXT.p5};
+  const fRes=await fetch(SUPABASE_URL+'/rest/v1/forms?select=*&order=sort_order.asc,created_at.asc',{headers:SB_H});
+  if(!fRes.ok) throw new Error('Fetch forms failed: '+fRes.status);
+  DB.forms=(await fRes.json()).map(f=>({...f,vote_options:(Array.isArray(f.vote_options)&&f.vote_options.length)?f.vote_options:DEFAULT_VOTES}));
+}
+async function createForm(obj){
+  const row={id:Date.now(),title:obj.title||'',body:obj.body||'',vote_options:obj.vote_options||DEFAULT_VOTES,active:obj.active!==false,sort_order:obj.sort_order||0,created_at:new Date().toISOString()};
+  const res=await fetch(SUPABASE_URL+'/rest/v1/forms',{method:'POST',headers:{...SB_H,'Prefer':'return=minimal'},body:JSON.stringify(row)});
+  if(!res.ok)throw new Error('Create form failed: '+res.status+' '+await res.text());
+  return row;
+}
+async function updateForm(id,patch){
+  const res=await fetch(SUPABASE_URL+'/rest/v1/forms?id=eq.'+id,{method:'PATCH',headers:{...SB_H,'Prefer':'return=minimal'},body:JSON.stringify(patch)});
+  if(!res.ok)throw new Error('Update form failed: '+res.status+' '+await res.text());
+}
+async function deleteForm(id){
+  const count=DB.sigs.filter(s=>String(s.form_id)===String(id)).length;
+  if(count>0){
+    if(confirm('לטופס זה יש '+count+' חתימות ולכן לא ניתן למחוק אותו (כדי לא לאבד נתונים).\nלהפוך אותו ללא-פעיל (יוסתר מהחותמים) במקום זאת?')){
+      await updateForm(id,{active:false});await loadFormMgr();
     }
+    return;
   }
+  if(!confirm('למחוק את הטופס? לטופס אין חתימות.'))return;
+  const res=await fetch(SUPABASE_URL+'/rest/v1/forms?id=eq.'+id,{method:'DELETE',headers:SB_H});
+  if(!res.ok){alert('שגיאה במחיקה');return;}
+  await loadFormMgr();
 }
-async function saveDB(){
-  // Text only — signatures handled individually
-  const res=await fetch(SUPABASE_URL+'/rest/v1/form_text?id=eq.1',{
-    method:'PATCH',headers:{...SB_H,'Prefer':'return=minimal'},
-    body:JSON.stringify(DB.text)
-  });
-  if(!res.ok) throw new Error('Text save failed: '+res.status);
+
+// ── End-user signing: render selectable forms with per-form vote ──
+function renderFormsSelector(){
+  const active=DB.forms.filter(f=>f.active);
+  const wrap=document.getElementById('formsSelector');
+  if(!active.length){wrap.innerHTML='<div class="empty">אין טפסים זמינים כרגע</div>';return;}
+  wrap.innerHTML=active.map(f=>{
+    const paras=bodyParas(f).map(p=>`<p>${esc(p)}</p>`).join('');
+    const votes=voteOpts(f).map(v=>`<label class="cbitem"><span>${esc(v)}</span><input type="checkbox" name="vote-${f.id}" value="${esc(v)}" onchange="voteSelect('${f.id}',this)"/></label>`).join('');
+    return `<div class="fsel" id="fsel-${f.id}">
+      <label class="fsel-head">
+        <input type="checkbox" name="formsel" value="${f.id}" onchange="toggleFormPick('${f.id}',this)"/>
+        <div><div class="fsel-title">${esc(f.title||'טופס')}</div><div class="fsel-body">${paras}</div></div>
+      </label>
+      <div class="fsel-votes" id="fvotes-${f.id}" hidden>
+        <div class="vlbl">אני מאשר/ת את ההחלטה המופיעה בטופס זה <span class="req">*</span></div>
+        <div class="cbgroup">${votes}</div>
+        <div class="field-err">יש לבחור עמדה</div>
+      </div>
+    </div>`;
+  }).join('');
 }
-function renderFormText(){
-  document.getElementById('formTitle').textContent=DB.text.title||DEFAULT_TEXT.title;
-  document.getElementById('formBody').innerHTML=
-    ['p1','p2','p3','p4','p5'].filter(k=>DB.text[k]).map(k=>`<p>${esc(DB.text[k])}</p>`).join('');
-}
-(async()=>{try{await fetchDB();}catch(e){}renderFormText();})();
+(async()=>{try{await fetchDB();}catch(e){}renderFormsSelector();})();
 
 function showTab(t){
   document.getElementById('tab-form').style.display=t==='form'?'':'none';
@@ -244,7 +320,7 @@ function showSection(s){
   document.getElementById('sec-sigs').style.display=s==='sigs'?'':'none';
   document.getElementById('sec-editor').style.display=s==='editor'?'':'none';
   document.querySelectorAll('.stab').forEach((el,i)=>el.classList.toggle('active',(s==='sigs'&&i===0)||(s==='editor'&&i===1)));
-  if(s==='editor')loadTextIntoEditor();
+  if(s==='editor'){closeFormEditor();loadFormMgr();}
 }
 
 const canvas=document.getElementById('sig');
@@ -263,8 +339,26 @@ canvas.addEventListener('touchmove',e=>{e.preventDefault();if(!drawing)return;co
 canvas.addEventListener('touchend',()=>drawing=false);
 function setColor(el){document.querySelectorAll('.cdot').forEach(d=>d.classList.remove('active'));el.classList.add('active');sigColor=el.dataset.color;applyStyle();}
 function clearSig(){ctx.clearRect(0,0,canvas.width,canvas.height);hasSig=false;}
-function exclusiveCheck(cb){if(cb.checked)document.querySelectorAll('input[name="vote"]').forEach(o=>{if(o!==cb)o.checked=false;});}
+function voteSelect(formId,cb){if(cb.checked)document.querySelectorAll('input[name="vote-'+formId+'"]').forEach(o=>{if(o!==cb)o.checked=false;});}
+function toggleFormPick(formId,cb){
+  const card=document.getElementById('fsel-'+formId);
+  const votes=document.getElementById('fvotes-'+formId);
+  card.classList.toggle('picked',cb.checked);
+  votes.hidden=!cb.checked;
+  if(!cb.checked){
+    document.querySelectorAll('input[name="vote-'+formId+'"]').forEach(o=>o.checked=false);
+    card.classList.remove('invalid');
+  }
+  if(document.querySelector('input[name="formsel"]:checked'))document.getElementById('formsSelErr').style.display='none';
+}
 
+function getSelected(){
+  return Array.from(document.querySelectorAll('input[name="formsel"]:checked')).map(cb=>{
+    const id=cb.value;
+    const v=document.querySelector('input[name="vote-'+id+'"]:checked');
+    return {formId:id,vote:v?v.value:''};
+  });
+}
 function validate(){
   let ok=true;
   function chk(id,val){const c=document.getElementById(id);if(!val||val.trim()===''){c.classList.add('invalid');ok=false;}else c.classList.remove('invalid');}
@@ -273,49 +367,58 @@ function validate(){
   chk('c-phone',document.getElementById('f-phone').value);
   chk('c-apt',document.getElementById('f-apt').value);
   chk('c-date',document.getElementById('f-date').value);
-  const vc=document.getElementById('c-vote');
-  if(!getVote()){vc.classList.add('invalid');ok=false;}else vc.classList.remove('invalid');
+  const sel=getSelected();
+  if(!sel.length){document.getElementById('formsSelErr').style.display='block';ok=false;}
+  else document.getElementById('formsSelErr').style.display='none';
+  sel.forEach(s=>{const card=document.getElementById('fsel-'+s.formId);if(!s.vote){card.classList.add('invalid');ok=false;}else card.classList.remove('invalid');});
   const sc=document.getElementById('c-sig'),se=document.getElementById('sigErr');
   if(!hasSig){sc.style.borderColor='#e74c3c';se.style.display='block';ok=false;}else{sc.style.borderColor='';se.style.display='none';}
   return ok;
 }
-function getVote(){const c=document.querySelector('input[name="vote"]:checked');return c?c.value:'';}
 
 async function submitForm(){
   if(!validate()){window.scrollTo({top:0,behavior:'smooth'});return;}
   const btn=document.getElementById('btnSubmit');
   btn.innerHTML='שומר...<span class="spinner"></span>';btn.disabled=true;
-  const entry={id:Date.now(),email:document.getElementById('f-email').value,name:document.getElementById('f-name').value,phone:document.getElementById('f-phone').value,apt:document.getElementById('f-apt').value,vote:getVote(),date:document.getElementById('f-date').value,sig:canvas.toDataURL('image/png'),ts:new Date().toLocaleString('he-IL',{timeZone:'Asia/Jerusalem'})};
+  const sel=getSelected();
+  const base={
+    email:document.getElementById('f-email').value,
+    name:document.getElementById('f-name').value,
+    phone:document.getElementById('f-phone').value,
+    apt:document.getElementById('f-apt').value,
+    date:document.getElementById('f-date').value,
+    sig:canvas.toDataURL('image/png'),
+    ts:new Date().toLocaleString('he-IL',{timeZone:'Asia/Jerusalem'})
+  };
+  const now=Date.now();
+  // one record per selected form; offset id to avoid PK collision in a single submit
+  const entries=sel.map((s,i)=>({...base,id:now+i,form_id:Number(s.formId),vote:s.vote}));
   try{
-    // Insert directly to Supabase — no race conditions
+    // Bulk insert array directly to Supabase
     const insRes=await fetch(SUPABASE_URL+'/rest/v1/signatures',{
       method:'POST',
       headers:{...SB_H,'Prefer':'return=minimal'},
-      body:JSON.stringify(entry)
+      body:JSON.stringify(entries)
     });
     if(!insRes.ok){const e=await insRes.text();throw new Error('Insert failed: '+insRes.status+' '+e);}
-    DB.sigs.push(entry);
+    entries.forEach(e=>DB.sigs.push(e));
     document.getElementById('successBanner').style.display='block';
-    document.getElementById('successBanner').textContent='✓ החתימה נשמרה בהצלחה!';
-    // Send email notification
-    try{
-      if(window.emailjs){
-        const ejsRes=await emailjs.send(EJS_SERVICE,EJS_TEMPLATE,{
-          name:entry.name,
-          apt:entry.apt,
-          vote:entry.vote,
-          email:entry.email,
-          phone:entry.phone,
-          date:entry.date,
-          ts:entry.ts
-        });
-        console.log('EmailJS sent:',ejsRes.status,ejsRes.text);
-      }else{
-        console.warn('EmailJS not loaded');
-      }
-    }catch(ex){console.warn('EmailJS error:',ex.text||ex);}
+    document.getElementById('successBanner').textContent=entries.length>1?'✓ '+entries.length+' החתימות נשמרו בהצלחה!':'✓ החתימה נשמרה בהצלחה!';
+    // Send one email notification per signed form
+    for(const entry of entries){
+      try{
+        if(window.emailjs){
+          const form=DB.forms.find(f=>f.id===entry.form_id);
+          const ejsRes=await emailjs.send(EJS_SERVICE,EJS_TEMPLATE,{
+            form:form?form.title:'',
+            name:entry.name,apt:entry.apt,vote:entry.vote,email:entry.email,phone:entry.phone,date:entry.date,ts:entry.ts
+          });
+          console.log('EmailJS sent:',ejsRes.status,ejsRes.text);
+        }else{console.warn('EmailJS not loaded');}
+      }catch(ex){console.warn('EmailJS error:',ex.text||ex);}
+    }
     ['f-email','f-name','f-phone','f-apt','f-date'].forEach(id=>document.getElementById(id).value='');
-    document.querySelectorAll('input[name="vote"]').forEach(c=>c.checked=false);
+    document.querySelectorAll('input[name="formsel"]').forEach(c=>{c.checked=false;toggleFormPick(c.value,c);});
     clearSig();window.scrollTo({top:0,behavior:'smooth'});
   }catch(e){alert('שגיאה בשמירה: '+e.message);}
   btn.innerHTML='שלח';btn.disabled=false;
@@ -330,45 +433,127 @@ function checkPwd(){
 }
 async function loadAdmin(){
   document.getElementById('sigList').innerHTML='<div class="loading-msg">טוען...</div>';
-  try{await fetchDB();renderStats(DB.sigs);renderList(DB.sigs);}
+  try{await fetchDB();renderAdminPicker();renderAdminView();}
   catch(e){document.getElementById('sigList').innerHTML='<div class="empty">שגיאה בטעינה</div>';}
 }
-function renderStats(sigs){
-  const f=sigs.filter(s=>s.vote==='בעד').length,a=sigs.filter(s=>s.vote==='נגד').length,ab=sigs.filter(s=>s.vote==='נמנע').length;
-  document.getElementById('statsBar').innerHTML=`
-    <div class="stat"><div class="num">${sigs.length}</div><div class="lbl">סה"כ</div></div>
-    <div class="stat"><div class="num" style="color:#1a9e5c">${f}</div><div class="lbl">בעד</div></div>
-    <div class="stat"><div class="num" style="color:#c0392b">${a}</div><div class="lbl">נגד</div></div>
-    <div class="stat"><div class="num" style="color:#636e72">${ab}</div><div class="lbl">נמנע</div></div>`;
+function renderAdminPicker(){
+  const sel=document.getElementById('adminFormPicker');
+  if(adminFormId!=='all'&&!DB.forms.some(f=>String(f.id)===String(adminFormId)))adminFormId='all';
+  sel.innerHTML=['<option value="all">כל הטפסים</option>']
+    .concat(DB.forms.map(f=>`<option value="${f.id}">${esc(f.title||'טופס')}${f.active?'':' (לא פעיל)'}</option>`)).join('');
+  sel.value=adminFormId;
+}
+function onAdminFormChange(){adminFormId=document.getElementById('adminFormPicker').value;renderAdminView();}
+function downloadCurrentPDF(){if(adminFormId==='all'){alert('בחרו טופס ספציפי להורדת PDF');return;}downloadAllPDF(adminFormId);}
+function currentSigs(){return adminFormId==='all'?DB.sigs:DB.sigs.filter(s=>String(s.form_id)===String(adminFormId));}
+function renderAdminView(){
+  const form=adminFormId==='all'?null:DB.forms.find(f=>String(f.id)===String(adminFormId));
+  const sigs=currentSigs();
+  document.getElementById('btnDlAll').style.display=(adminFormId==='all')?'none':'';
+  renderStats(sigs,form);
+  renderList(sigs);
+}
+function renderStats(sigs,form){
+  let html=`<div class="stat"><div class="num">${sigs.length}</div><div class="lbl">סה"כ</div></div>`;
+  if(form){
+    voteOpts(form).forEach(v=>{
+      const c=sigs.filter(s=>s.vote===v).length;
+      html+=`<div class="stat"><div class="num" style="color:${voteStyle(v,form).color}">${c}</div><div class="lbl">${esc(v)}</div></div>`;
+    });
+  }else{
+    html+=`<div class="stat"><div class="num" style="color:#6c5ce7">${DB.forms.length}</div><div class="lbl">טפסים</div></div>`;
+  }
+  document.getElementById('statsBar').innerHTML=html;
 }
 function renderList(sigs){
   const list=document.getElementById('sigList');
   if(!sigs.length){list.innerHTML='<div class="empty">אין חתימות עדיין</div>';return;}
-  list.innerHTML=sigs.slice().reverse().map(s=>`
-    <div class="sig-row">
+  list.innerHTML=sigs.slice().reverse().map(s=>{
+    const form=DB.forms.find(f=>String(f.id)===String(s.form_id));
+    const vs=voteStyle(s.vote,form);
+    const formName=form?esc(form.title||'טופס'):'טופס לא ידוע';
+    return `<div class="sig-row">
       <div class="sig-row-top">
-        <div><div class="sig-name">${esc(s.name)}</div><div class="sig-meta">${esc(s.email)} · ${esc(s.phone)} · דירה: ${esc(s.apt)}</div><div class="sig-meta">${esc(s.date)} · ${esc(s.ts)}</div></div>
+        <div><div class="sig-name">${esc(s.name)}</div><div class="sig-meta">${esc(s.email)} · ${esc(s.phone)} · דירה: ${esc(s.apt)}</div><div class="sig-meta">${esc(s.date)} · ${esc(s.ts)}</div><div class="sig-meta">טופס: ${formName}</div></div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <span class="vote-badge ${s.vote==='בעד'?'vote-for':s.vote==='נגד'?'vote-against':'vote-abstain'}">${esc(s.vote)}</span>
+          <span class="vote-badge ${vs.cls}">${esc(s.vote)}</span>
           <button class="btn-sm" onclick="downloadOnePDF(${s.id})">PDF</button>
           <button class="btn-sm" style="border-color:#e74c3c;color:#e74c3c" onclick="deleteSig(${s.id})">מחק</button>
         </div>
       </div>
       <img class="sig-img" src="${s.sig}" alt="חתימה"/>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
-function loadTextIntoEditor(){
-  ['title','p1','p2','p3','p4','p5'].forEach(k=>{const el=document.getElementById('ed-'+k);if(el)el.value=DB.text[k]||'';});
+
+// ── Admin: form manager ──
+let editingFormId=null;
+async function loadFormMgr(){
+  document.getElementById('formMgrList').innerHTML='<div class="loading-msg">טוען טפסים...</div>';
+  try{await fetchDB();renderFormManager();}
+  catch(e){document.getElementById('formMgrList').innerHTML='<div class="empty">שגיאה בטעינה</div>';}
+}
+function renderFormManager(){
+  const list=document.getElementById('formMgrList');
+  if(!DB.forms.length){list.innerHTML='<div class="empty">אין טפסים. צרו טופס חדש.</div>';return;}
+  list.innerHTML=DB.forms.map(f=>{
+    const count=DB.sigs.filter(s=>String(s.form_id)===String(f.id)).length;
+    return `<div class="form-mgr-item">
+      <div class="form-mgr-top">
+        <div>
+          <div class="form-mgr-name">${esc(f.title||'טופס')} ${f.active?'':'<span class="badge-inactive">לא פעיל</span>'}</div>
+          <div class="form-mgr-meta">${count} חתימות · ${voteOpts(f).length} אפשרויות הצבעה</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-sm" onclick="editForm(${f.id})">עריכה</button>
+          <button class="btn-sm" style="border-color:#e74c3c;color:#e74c3c" onclick="deleteForm(${f.id})">מחק</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function newForm(){
+  editingFormId=null;
+  document.getElementById('formEditorTitle').textContent='טופס חדש';
+  document.getElementById('ed-title').value='';
+  document.getElementById('ed-body').value='';
+  document.getElementById('ed-votes').value=DEFAULT_VOTES.join('\n');
+  document.getElementById('ed-active').checked=true;
   document.getElementById('saveNote').style.display='none';
+  document.getElementById('formEditor').style.display='';
+  document.getElementById('formEditor').scrollIntoView({behavior:'smooth'});
 }
-async function saveText(){
-  DB.text={title:document.getElementById('ed-title').value,p1:document.getElementById('ed-p1').value,p2:document.getElementById('ed-p2').value,p3:document.getElementById('ed-p3').value,p4:document.getElementById('ed-p4').value,p5:document.getElementById('ed-p5').value};
+function editForm(id){
+  const f=DB.forms.find(x=>String(x.id)===String(id));
+  if(!f)return;
+  editingFormId=f.id;
+  document.getElementById('formEditorTitle').textContent='עריכת טופס';
+  document.getElementById('ed-title').value=f.title||'';
+  document.getElementById('ed-body').value=f.body||'';
+  document.getElementById('ed-votes').value=voteOpts(f).join('\n');
+  document.getElementById('ed-active').checked=f.active!==false;
+  document.getElementById('saveNote').style.display='none';
+  document.getElementById('formEditor').style.display='';
+  document.getElementById('formEditor').scrollIntoView({behavior:'smooth'});
+}
+function closeFormEditor(){document.getElementById('formEditor').style.display='none';editingFormId=null;}
+async function saveForm(){
+  const title=document.getElementById('ed-title').value.trim();
+  const body=document.getElementById('ed-body').value;
+  let votes=document.getElementById('ed-votes').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!votes.length)votes=DEFAULT_VOTES.slice();
+  const active=document.getElementById('ed-active').checked;
+  if(!title){alert('יש להזין כותרת לטופס');return;}
   try{
-    await saveDB();
-    renderFormText();
-    document.getElementById('saveNote').style.display='block';
-    setTimeout(()=>document.getElementById('saveNote').style.display='none',4000);
-  }catch(e){alert('שגיאה בשמירת טקסט: '+e.message);}
+    if(editingFormId){await updateForm(editingFormId,{title,body,vote_options:votes,active});}
+    else{await createForm({title,body,vote_options:votes,active,sort_order:DB.forms.length});}
+    await fetchDB();
+    renderFormManager();
+    renderFormsSelector();
+    const note=document.getElementById('saveNote');note.style.display='block';
+    setTimeout(()=>{note.style.display='none';},4000);
+    setTimeout(closeFormEditor,800);
+  }catch(e){alert('שגיאה בשמירת הטופס: '+e.message);}
 }
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
@@ -403,9 +588,10 @@ function textImg(text, opts={}){
 }
 
 // Vote badge as image
-function voteImg(vote){
-  const color = vote==='בעד' ? '#1a9e5c' : vote==='נגד' ? '#c0392b' : '#636e72';
-  const bg    = vote==='בעד' ? '#eafaf1' : vote==='נגד' ? '#fdf2f0' : '#f0f0f0';
+function voteImg(vote,form){
+  const st = voteStyle(vote,form);
+  const color = st.color;
+  const bg    = st.bg;
   const c = document.createElement('canvas');
   c.width=80; c.height=28;
   const cx=c.getContext('2d');
@@ -473,9 +659,11 @@ function paragraphImg(paragraphs, opts={}){
 }
 
 // ── Download all PDF ──────────────────────────────────────
-async function downloadAllPDF(){
+async function downloadAllPDF(formId){
   await fetchDB();
-  const sigs=DB.sigs;
+  const form=DB.forms.find(f=>String(f.id)===String(formId));
+  if(!form){alert('בחרו טופס ספציפי להורדה');return;}
+  const sigs=DB.sigs.filter(s=>String(s.form_id)===String(formId));
   if(!sigs.length){alert('אין חתימות להורדה');return;}
   const {jsPDF}=window.jspdf;
 
@@ -493,8 +681,8 @@ async function downloadAllPDF(){
 
   // ── Agreement text they were signing for (full-width card at top) ──
   const cardW=PW-M*2, pad=4;
-  const agParas=['p1','p2','p3','p4','p5'].filter(k=>DB.text&&DB.text[k]).map(k=>DB.text[k]);
-  const agTitle=(DB.text&&DB.text.title)||DEFAULT_TEXT.title;
+  const agParas=bodyParas(form);
+  const agTitle=form.title||DEFAULT_TEXT.title;
   const titleBlock=paragraphImg([agTitle],{fontSize:12,bold:true,color:'#6c5ce7',mmW:cardW-pad*2});
   const bodyBlock=agParas.length?paragraphImg(agParas,{fontSize:8.5,color:'#2d3436',mmW:cardW-pad*2}):null;
   const cardH=pad*2+titleBlock.mmH+(bodyBlock?bodyBlock.mmH+2:0);
@@ -505,22 +693,16 @@ async function downloadAllPDF(){
   cy+=titleBlock.mmH+(bodyBlock?2:0);
   if(bodyBlock)doc.addImage(bodyBlock.img,'PNG',M+pad,cy,cardW-pad*2,bodyBlock.mmH);
 
-  // ── Summary badges ──
+  // ── Summary badges (one per vote option + total) ──
   const badgeY=31+cardH+5;
-  const fC=sigs.filter(s=>s.vote==='בעד').length;
-  const aC=sigs.filter(s=>s.vote==='נגד').length;
-  const abC=sigs.filter(s=>s.vote==='נמנע').length;
+  const badges=voteOpts(form).map(v=>[`${v}: ${sigs.filter(s=>s.vote===v).length}`,hexRgb(voteStyle(v,form).color)]);
+  badges.push([`Total: ${sigs.length}`,[108,92,231]]);
   let bx=M;
-  [
-    [`For: ${fC}`,[26,188,156]],
-    [`Against: ${aC}`,[231,76,60]],
-    [`Abstain: ${abC}`,[150,150,150]],
-    [`Total: ${sigs.length}`,[108,92,231]]
-  ].forEach(([lbl,col])=>{
-    doc.setFillColor(...col);doc.roundedRect(bx,badgeY,36,10,2,2,'F');
-    const bi=textImg(lbl,{fontSize:9,bold:true,color:'#ffffff',mmW:34,mmH:8});
-    doc.addImage(bi,'PNG',bx+1,badgeY+1,34,8);
-    bx+=40;
+  badges.forEach(([lbl,col])=>{
+    doc.setFillColor(...col);doc.roundedRect(bx,badgeY,40,10,2,2,'F');
+    const bi=textImg(lbl,{fontSize:9,bold:true,color:'#ffffff',mmW:38,mmH:8});
+    doc.addImage(bi,'PNG',bx+1,badgeY+1,38,8);
+    bx+=44;
   });
 
   // ── Column definitions (landscape A4 = 297mm wide) ──
@@ -574,7 +756,7 @@ async function downloadAllPDF(){
     doc.addImage(textImg(s.apt||'',{fontSize:8,color:'#444',mmW:21,mmH:ROW_H-2}),'PNG',M+54,y+1,21,ROW_H-2);
 
     // Vote badge
-    doc.addImage(voteImg(s.vote),'PNG',M+77,y+4,20,12);
+    doc.addImage(voteImg(s.vote,form),'PNG',M+77,y+4,20,12);
 
     // Date
     doc.addImage(textImg(fmtDate(s.date),{fontSize:8,color:'#444',mmW:23,mmH:ROW_H-2}),'PNG',M+100,y+1,23,ROW_H-2);
@@ -603,7 +785,8 @@ async function downloadAllPDF(){
   doc.setTextColor(255,255,255);
   doc.text(`Generated: ${new Date().toLocaleString('he-IL')}  |  Chana Snesh 16-22, Bat Yam`, PW/2, PH-3, {align:'center'});
 
-  doc.save(`signatures_${new Date().toISOString().slice(0,10)}.pdf`);
+  const slug=(form.title||'form').replace(/\s+/g,'_').slice(0,40);
+  doc.save(`signatures_${slug}_${new Date().toISOString().slice(0,10)}.pdf`);
 }
 
 // ── Delete a signature ────────────────────────────────────
@@ -620,6 +803,7 @@ async function deleteSig(id){
 async function downloadOnePDF(id){
   const s=DB.sigs.find(x=>x.id===id);
   if(!s)return;
+  const form=DB.forms.find(f=>String(f.id)===String(s.form_id));
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const W=210,M=18,CW=W-M*2;
@@ -631,8 +815,8 @@ async function downloadOnePDF(id){
   let y=20;
 
   // ── Agreement text they were signing for (top of the document) ──
-  const agParas=['p1','p2','p3','p4','p5'].filter(k=>DB.text&&DB.text[k]).map(k=>DB.text[k]);
-  const agTitle=(DB.text&&DB.text.title)||DEFAULT_TEXT.title;
+  const agParas=bodyParas(form);
+  const agTitle=(form&&form.title)||DEFAULT_TEXT.title;
   const titleBlock=paragraphImg([agTitle],{fontSize:12,bold:true,color:'#6c5ce7',mmW:CW});
   doc.addImage(titleBlock.img,'PNG',M,y,CW,titleBlock.mmH);
   y+=titleBlock.mmH+1;
@@ -648,7 +832,7 @@ async function downloadOnePDF(id){
     doc.text(label.toUpperCase(), M, y+4);
     if(highlight){
       doc.setFillColor(243,240,255);doc.roundedRect(M,y+6,CW,10,2,2,'F');
-      const vi=voteImg(value);
+      const vi=voteImg(value,form);
       doc.addImage(vi,'PNG',M+2,y+7,24,8);
     } else {
       const vi=textImg(value||'—',{fontSize:11,color:'#2d3436',mmW:CW,mmH:9});
